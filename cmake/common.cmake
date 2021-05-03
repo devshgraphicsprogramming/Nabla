@@ -48,10 +48,7 @@ macro(nbl_create_executable_project _EXTRA_SOURCES _EXTRA_OPTIONS _EXTRA_INCLUDE
 		PRIVATE ${_EXTRA_INCLUDES}
 	)
 	target_link_libraries(${EXECUTABLE_NAME} Nabla ${_EXTRA_LIBS}) # see, this is how you should code to resolve github issue 311
-	if (NBL_COMPILE_WITH_OPENGL)
-		find_package(OpenGL REQUIRED)
-		target_link_libraries(${EXECUTABLE_NAME} ${OPENGL_LIBRARIES})
-	endif()
+
 	add_compile_options(${_EXTRA_OPTIONS})
 	
 	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -77,6 +74,7 @@ macro(nbl_create_executable_project _EXTRA_SOURCES _EXTRA_OPTIONS _EXTRA_INCLUDE
 	# https://github.com/buildaworldnet/IrrlichtBAW/issues/298 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
 	nbl_adjust_flags() # macro defined in root CMakeLists
 	nbl_adjust_definitions() # macro defined in root CMakeLists
+	add_definitions(-D_NBL_PCH_IGNORE_PRIVATE_HEADERS)
 
 	set_target_properties(${EXECUTABLE_NAME} PROPERTIES DEBUG_POSTFIX _d)
 	set_target_properties(${EXECUTABLE_NAME} PROPERTIES RELWITHDEBINFO_POSTFIX _rwdi)

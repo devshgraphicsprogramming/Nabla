@@ -8,8 +8,79 @@ cmake_policy(SET CMP0072 OLD) #not yet, would need to get pointers to all OpenGL
 set(OpenGL_GL_PREFERENCE LEGACY)
 #cmake_policy(SET CMP )
 
-project(Nabla LANGUAGES CXX C)
+option(NBL_BUILD_ANDROID "Build for Android?" OFF)
 
+if(NBL_BUILD_ANDROID)
+    if(NOT DEFINED ENV{JAVA_HOME})
+        message(FATAL_ERROR "JAVA_HOME environment variable must be defined for Android build")
+    endif()
+    message(STATUS "Using JAVA_HOME = $ENV{JAVA_HOME}")
+
+    execute_process(COMMAND $ENV{JAVA_HOME}/bin/java -version
+        RESULT_VARIABLE _result
+        OUTPUT_VARIABLE _output
+        ERROR_VARIABLE _output
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_STRIP_TRAILING_WHITESPACE)
+    
+    if(NOT _result AND _output MATCHES "version \"([0-9]+).([0-9]+)")
+        message(STATUS "Java in JAVA_HOME is ${CMAKE_MATCH_1}.${CMAKE_MATCH_2}")
+    else()
+        message(STATUS "Java in JAVA_HOME is unknown version ${_output} ${_result}")
+    endif()
+
+    if(DEFINED ENV{ANDROID_HOME} AND EXISTS "$ENV{ANDROID_HOME}/build-tools")
+        set(ANDROID_SDK_ROOT_PATH "$ENV{ANDROID_HOME}")
+    elseif(DEFINED ENV{ANDROID_SDK_ROOT} AND EXISTS "$ENV{ANDROID_SDK_ROOT}/build-tools")
+        set(ANDROID_SDK_ROOT_PATH "$ENV{ANDROID_SDK_ROOT}")
+    elseif(DEFINED ENV{ANDROID_SDK} AND EXISTS "$ENV{ANDROID_SDK}/build-tools")
+        set(ANDROID_SDK_ROOT_PATH "$ENV{ANDROID_SDK}")
+    else()
+        message(FATAL_ERROR "Can't locate Android SDK, set ANDROID_HOME, ANDROID_SDK_ROOT or ANDROID_SDK")
+    endif()
+
+    message(STATUS "Using Android SDK found in ${ANDROID_SDK_ROOT_PATH}")
+
+    if(DEFINED ENV{ANDROID_NDK_HOME} AND EXISTS "$ENV{ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake")
+        set(ANDROID_NDK_ROOT_PATH "$ENV{ANDROID_NDK_HOME}")
+    elseif(DEFINED ENV{ANDROID_NDK_ROOT} AND EXISTS "$ENV{ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake")
+        set(ANDROID_NDK_ROOT_PATH "$ENV{ANDROID_NDK_ROOT}")
+    elseif(DEFINED ENV{NDK_HOME} AND EXISTS "$ENV{NDK_HOME}/build/cmake/android.toolchain.cmake")
+        set(ANDROID_NDK_ROOT_PATH "$ENV{NDK_HOME}")
+    elseif(DEFINED ENV{ANDROID_NDK} AND EXISTS "$ENV{ANDROID_NDK}/build/cmake/android.toolchain.cmake")
+        set(ANDROID_NDK_ROOT_PATH "$ENV{ANDROID_NDK}")
+    else()
+        message(FATAL_ERROR "Can't locate Android NDK, set ANDROID_NDK_HOME, ANDROID_NDK_ROOT, NDK_HOME or ANDROID_NDK")
+    endif()
+
+    message(STATUS "Using Android NDK found in ${ANDROID_NDK_ROOT_PATH}")
+
+    set(CMAKE_TOOLCHAIN_FILE
+        "${ANDROID_NDK_ROOT_PATH}/build/cmake/android.toolchain.cmake"
+        CACHE STRING
+        "The Android toolchain file")
+
+    #option(STRIP_ANDROID_LIBRARY "Strip the resulting android library" OFF)
+
+    # Set default API level to 21 if not configured explicitly
+    if(NOT ANDROID_PLATFORM)
+        set(ANDROID_PLATFORM "android-25")
+    endif()
+    
+    # default to libc++_static as the other options can cause crashes
+    if(NOT ANDROID_STL)
+        set(ANDROID_STL "c++_static")
+    endif()
+
+    # Choose clang if the NDK has both gcc and clang, since gcc sometimes fails
+    set(CMAKE_ANDROID_NDK_TOOLCHAIN_VERSION "clang")
+
+    # Default to arm32 if nothing is specified on the command line.
+    # Options are {armeabi-v7a,arm64-v8a}
+    set(ANDROID_ABI "x86_64" CACHE STRING "The Android ABI to build for")
+endif()
+
+project(Nabla LANGUAGES CXX C)
 
 find_package(Vulkan)
 if (Vulkan_FOUND)
@@ -19,6 +90,7 @@ else()
 endif()
 
 option(NBL_COMPILE_WITH_CUDA "Compile with CUDA interop?" OFF)
+option(NBL_COMPILE_WITH_SDL2 "Compile with SDL2" ON)
 
 # CUDA test
 include(CheckLanguage)
@@ -83,14 +155,13 @@ macro(nbl_adjust_flags)
 	option(NBL_GCC_SANITIZE_THREAD OFF) # @Anastazluk did MSVC finally include the thread sanitizer?
 
 	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-		if (NOT NBL_BUILD_CEGUI)
-			add_compile_options(-fno-exceptions)
+		
+		if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+			add_compile_options("$<$<CONFIG:DEBUG>:-g>")
 		endif()
-
 		add_compile_options(
 			-Wextra
 			-Wno-unused-parameter
-			-Wno-unused-but-set-parameter
 			-fno-strict-aliasing
 			-msse4.2
 			-mfpmath=sse
@@ -107,11 +178,23 @@ macro(nbl_adjust_flags)
 			"$<$<CONFIG:DEBUG>:-Wall>"
 			"$<$<CONFIG:DEBUG>:-fno-omit-frame-pointer>"
 			"$<$<CONFIG:DEBUG>:-fstack-protector-strong>"
-			#"$<$<CONFIG:RELEASE>:-O3>" # added by default and apparently cmake is not clever enough to filter duplicates for this one
-			"$<$<CONFIG:RELEASE>:-fexpensive-optimizations>"
 		)
+		if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+			if (NOT NBL_BUILD_CEGUI)
+				add_compile_options(-fno-exceptions)
+			endif()
+
+			add_compile_options(
+			-Wno-unused-but-set-parameter	
+			"$<$<CONFIG:RELEASE>:-fexpensive-optimizations>"
+			)
+		else()
+			add_compile_options( 
+				"$<$<STREQUAL:$<TARGET_PROPERTY:LINKER_LANGUAGE>,C>:-maes>"
+			)	
+		endif()
 		if (NBL_SANITIZE_ADDRESS)
-			add_compile_options(-fsanitize=address)
+			add_compile_options(-fsanitize=address) 
 		endif()
 		if (NBL_GCC_SANITIZE_THREAD)
 			add_compile_options(-fsanitize=thread)
@@ -128,9 +211,7 @@ macro(nbl_adjust_flags)
 				"$<$<CONFIG:RELEASE>:-ffast-math>"
 			)
 		endif()
-		if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-			add_compile_options("$<$<CONFIG:DEBUG>:-ggdb3>")
-		endif()
+
 	elseif(MSVC) # /arch:sse3 or anything like this is not needed on x64 on MSVC for enabling sse3 instructions
 		if (NBL_SANITIZE_ADDRESS)
 			set(NBL_MSVC_FLAG_SANITIZE_ADDRESS "/fsanitize=address")
@@ -185,8 +266,11 @@ endmacro()
 
 if(WIN32)
 	set(_NBL_PLATFORM_WINDOWS_ 1)
+elseif(ANDROID)
+	set(_NBL_PLATFORM_ANDROID_ 1)
 elseif(UNIX)
 	set(_NBL_PLATFORM_LINUX_ 1)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.1")
 endif()
 
 #uncomment in the future

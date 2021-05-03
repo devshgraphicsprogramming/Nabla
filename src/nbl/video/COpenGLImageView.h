@@ -18,11 +18,7 @@ namespace video
 class COpenGLImageView final : public IGPUImageView
 {
 	protected:
-		virtual ~COpenGLImageView()
-		{
-			if (name)
-				glDeleteTextures(1u,&name);
-		}
+		virtual ~COpenGLImageView();
 
 		GLuint name;
 		GLenum target;
@@ -30,22 +26,32 @@ class COpenGLImageView final : public IGPUImageView
 
 	public:
 		_NBL_STATIC_INLINE_CONSTEXPR GLenum ViewTypeToGLenumTarget[IGPUImageView::ET_COUNT] = {
-			GL_TEXTURE_1D,GL_TEXTURE_2D,GL_TEXTURE_3D,GL_TEXTURE_CUBE_MAP,GL_TEXTURE_1D_ARRAY,GL_TEXTURE_2D_ARRAY,GL_TEXTURE_CUBE_MAP_ARRAY
+			IOpenGL_FunctionTable::TEXTURE_1D,GL_TEXTURE_2D,GL_TEXTURE_3D,GL_TEXTURE_CUBE_MAP,IOpenGL_FunctionTable::TEXTURE_1D_ARRAY,GL_TEXTURE_2D_ARRAY,GL_TEXTURE_CUBE_MAP_ARRAY
 		};
 		_NBL_STATIC_INLINE_CONSTEXPR GLenum ComponentMappingToGLenumSwizzle[IGPUImageView::SComponentMapping::ES_COUNT] = {GL_INVALID_ENUM,GL_ZERO,GL_ONE,GL_RED,GL_GREEN,GL_BLUE,GL_ALPHA};
 
-		COpenGLImageView(SCreationParams&& _params) : IGPUImageView(std::move(_params)), name(0u), target(GL_INVALID_ENUM), internalFormat(GL_INVALID_ENUM)
+		GLenum getOpenGLTarget() const
+		{
+			auto viewtype = params.viewType;
+			GLenum target = ViewTypeToGLenumTarget[viewtype];
+			return target;
+		}
+
+		COpenGLImageView(ILogicalDevice* dev, IOpenGL_FunctionTable* gl, SCreationParams&& _params) : IGPUImageView(dev, std::move(_params)), name(0u), target(GL_INVALID_ENUM), internalFormat(GL_INVALID_ENUM)
 		{
 			target = ViewTypeToGLenumTarget[params.viewType];
-			internalFormat = getSizedOpenGLFormatFromOurFormat(params.format);
+			internalFormat = getSizedOpenGLFormatFromOurFormat(gl, params.format);
             assert(internalFormat != GL_INVALID_ENUM);
-			//COpenGLExtensionHandler::extGlCreateTextures(target, 1, &name);
-			glGenTextures(1, &name);
-			COpenGLExtensionHandler::extGlTextureView(	name, target, static_cast<COpenGLImage*>(params.image.get())->getOpenGLName(), internalFormat, 
+
+			//glTextureView spec:
+			//GL_INVALID_OPERATION is generated if texture has already been bound or otherwise given a target.
+			//thus we cannot create a name for view with glCreateTextures
+			gl->glTexture.pglGenTextures(1, &name);
+			gl->extGlTextureView(	name, target, static_cast<COpenGLImage*>(params.image.get())->getOpenGLName(), internalFormat, 
 														params.subresourceRange.baseMipLevel, params.subresourceRange.levelCount,
 														params.subresourceRange.baseArrayLayer, params.subresourceRange.layerCount);
 
-			GLuint swizzle[4u] = {GL_RED,GL_GREEN,GL_BLUE,GL_ALPHA};
+			GLint swizzle[4u] = {GL_RED,GL_GREEN,GL_BLUE,GL_ALPHA};
 			for (auto i=0u; i<4u; i++)
 			{
 				auto currentMapping = (&params.components.r)[i];
@@ -53,15 +59,11 @@ class COpenGLImageView final : public IGPUImageView
 					continue;
 				swizzle[i] = ComponentMappingToGLenumSwizzle[currentMapping];
 			}
-			COpenGLExtensionHandler::extGlTextureParameterIuiv(name,target,GL_TEXTURE_SWIZZLE_RGBA,swizzle);
-		}
-
-		void regenerateMipMapLevels() override
-		{
-			if (params.subresourceRange.levelCount <= 1u)
-				return;
-
-			COpenGLExtensionHandler::extGlGenerateTextureMipmap(name,target);
+			constexpr GLenum pname[4] = { GL_TEXTURE_SWIZZLE_R, GL_TEXTURE_SWIZZLE_G, GL_TEXTURE_SWIZZLE_B, GL_TEXTURE_SWIZZLE_A };
+			for (uint32_t i = 0u; i < 4u; ++i)
+			{
+				gl->extGlTextureParameteriv(name, target, pname[i], swizzle+i);
+			}
 		}
 
 		inline GLuint getOpenGLName() const { return name; }

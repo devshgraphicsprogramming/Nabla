@@ -9,7 +9,9 @@
 #include "nbl/asset/IBuffer.h"
 #include "nbl/asset/IDescriptor.h"
 #include "nbl/asset/ICPUBuffer.h"
+#include "nbl/asset/EImageLayout.h"
 #include "nbl/core/math/glslFunctions.tcc"
+#include "nbl/asset/ECommonEnums.h"
 
 namespace nbl
 {
@@ -111,6 +113,19 @@ class IImage : public IDescriptor
 		{
 			ET_OPTIMAL,
 			ET_LINEAR
+		};
+		enum E_USAGE_FLAGS : uint32_t
+		{
+			EUF_TRANSFER_SRC_BIT = 0x00000001,
+			EUF_TRANSFER_DST_BIT = 0x00000002,
+			EUF_SAMPLED_BIT = 0x00000004,
+			EUF_STORAGE_BIT = 0x00000008,
+			EUF_COLOR_ATTACHMENT_BIT = 0x00000010,
+			EUF_DEPTH_STENCIL_ATTACHMENT_BIT = 0x00000020,
+			EUF_TRANSIENT_ATTACHMENT_BIT = 0x00000040,
+			EUF_INPUT_ATTACHMENT_BIT = 0x00000080,
+			EUF_SHADING_RATE_IMAGE_BIT_NV = 0x00000100,
+			EUF_FRAGMENT_DENSITY_MAP_BIT_EXT = 0x00000200
 		};
 		struct SSubresourceRange
 		{
@@ -214,11 +229,12 @@ class IImage : public IDescriptor
 			uint32_t									mipLevels;
 			uint32_t									arrayLayers;
 			E_SAMPLE_COUNT_FLAGS						samples;
-			//E_TILING									tiling;
-			//E_USAGE_FLAGS								usage;
-			//E_SHARING_MODE							sharingMode;
-			//core::smart_refctd_dynamic_aray<uint32_t>	queueFamilyIndices;
-			//E_LAYOUT									initialLayout;
+			// stuff below is irrelevant in OpenGL backend
+			E_TILING									tiling = static_cast<E_TILING>(0);
+			std::underlying_type_t<E_USAGE_FLAGS>		usage = 0u;
+			E_SHARING_MODE								sharingMode = ESM_EXCLUSIVE;
+			core::smart_refctd_dynamic_array<uint32_t>	queueFamilyIndices = nullptr;
+			E_IMAGE_LAYOUT								initialLayout = EIL_UNDEFINED;
 
 			bool operator==(const SCreationParams& rhs) const
 			{
@@ -231,6 +247,12 @@ class IImage : public IDescriptor
 				return !operator==(rhs);
 			}
 		};
+
+				//!
+		inline const auto& getCreationParameters() const
+		{
+			return params;
+		}
 
 		//!
 		inline static uint32_t calculateMaxMipLevel(const VkExtent3D& extent, E_TYPE type)
@@ -351,8 +373,6 @@ class IImage : public IDescriptor
 			if (_params.mipLevels > calculateMaxMipLevel(_params.extent, _params.type))
 				return false;
 
-			// TODO: initialLayout must be VK_IMAGE_LAYOUT_UNDEFINED or VK_IMAGE_LAYOUT_PREINITIALIZED.
-
 			return true;
 		}
 
@@ -445,12 +465,6 @@ class IImage : public IDescriptor
 		//!
 		E_CATEGORY getTypeCategory() const override { return EC_IMAGE; }
 
-
-		//!
-		inline const auto& getCreationParameters() const
-		{
-			return params;
-		}
 
 		inline const auto& getTexelBlockInfo() const
 		{

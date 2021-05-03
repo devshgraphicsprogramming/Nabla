@@ -6,20 +6,13 @@
 #define __NBL_ASSET_I_MESH_BUFFER_H_INCLUDED__
 
 #include "nbl/asset/IRenderpassIndependentPipeline.h"
+#include "nbl/asset/ECommonEnums.h"
 #include <algorithm>
 
 namespace nbl
 {
 namespace asset
 {
-
-//! Where to move it so its not floating around scopeless?
-enum E_INDEX_TYPE : uint32_t
-{
-    EIT_16BIT = 0,
-    EIT_32BIT,
-    EIT_UNKNOWN
-};
 
 template <class BufferType, class DescSetType, class PipelineType, class SkeletonType>
 class IMeshBuffer : public virtual core::IReferenceCounted

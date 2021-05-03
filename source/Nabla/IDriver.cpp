@@ -13,58 +13,11 @@ namespace nbl
 namespace video
 {
 
-template<class AssetType>
-struct AssetBundleIterator
-{
-        using iterator_category = std::random_access_iterator_tag;
-        using difference_type = std::ptrdiff_t;
-
-        AssetBundleIterator(const core::smart_refctd_ptr<asset::IAsset>* _ptr) : ptr(_ptr) {}
-
-        // general operators
-        inline AssetType* operator*()
-        {
-            return static_cast<AssetType*>(ptr->get());
-        }
-        inline const AssetType* operator*() const
-        {
-            return static_cast<const AssetType*>(ptr->get());
-        }
-        inline const core::smart_refctd_ptr<asset::IAsset>* operator->() const
-        {
-            return ptr;
-        }
-
-        // arithmetic operators
-        inline AssetBundleIterator<AssetType>& operator++()
-        {
-            ++ptr;
-            return *this;
-        }
-        inline AssetBundleIterator<AssetType> operator++(int)
-        {
-            return AssetBundleIterator<AssetType>(ptr++);
-        }
-        inline difference_type operator-(const AssetBundleIterator<AssetType>& other) const
-        {
-            return ptr-other.ptr;
-        }
-
-        // comparison operators
-        inline bool operator!=(const AssetBundleIterator<AssetType>& other) const
-        {
-            return ptr!=other.ptr;
-        }
-
-    private:
-        const core::smart_refctd_ptr<asset::IAsset>* ptr;
-};
-
 //! Maybe we can reduce code duplication here some day
 template<typename AssetType>
 created_gpu_object_array<AssetType> IDriver::getGPUObjectsFromAssets(const core::SRange<const core::smart_refctd_ptr<asset::IAsset>>& _range, IGPUObjectFromAssetConverter* _converter)
 {
-    IGPUObjectFromAssetConverter def(m_device->getAssetManager(), this);
+    IGPUObjectFromAssetConverter def(m_assetMgr, this);
     if (!_converter)
         _converter = &def;
     AssetBundleIterator<AssetType> begin(_range.begin());
@@ -92,7 +45,7 @@ template created_gpu_object_array<asset::ICPUAnimationLibrary> IDriver::getGPUOb
 template<typename AssetType>
 created_gpu_object_array<AssetType> IDriver::getGPUObjectsFromAssets(const AssetType* const* const _begin, const AssetType* const* const _end, IGPUObjectFromAssetConverter* _converter)
 {
-    IGPUObjectFromAssetConverter def(m_device->getAssetManager(), this);
+    IGPUObjectFromAssetConverter def(m_assetMgr, this);
     if (!_converter)
         _converter = &def;
     return _converter->getGPUObjectsFromAssets<AssetType>(_begin, _end);
@@ -118,7 +71,7 @@ template created_gpu_object_array<asset::ICPUAnimationLibrary> IDriver::getGPUOb
 template<typename AssetType>
 created_gpu_object_array<AssetType> IDriver::getGPUObjectsFromAssets(const core::smart_refctd_ptr<AssetType>* _begin, const core::smart_refctd_ptr<AssetType>* _end, IGPUObjectFromAssetConverter* _converter)
 {
-    IGPUObjectFromAssetConverter def(m_device->getAssetManager(), this);
+    IGPUObjectFromAssetConverter def(m_assetMgr, this);
     if (!_converter)
         _converter = &def;
     return _converter->getGPUObjectsFromAssets<AssetType>(_begin, _end);

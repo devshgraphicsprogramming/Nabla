@@ -14,6 +14,9 @@
 #cmakedefine _NBL_PLATFORM_WINDOWS_
 #cmakedefine _NBL_PLATFORM_LINUX_
 #cmakedefine _NBL_PLATFORM_OSX_
+#cmakedefine _NBL_PLATFORM_ANDROID_
+
+#cmakedefine _NBL_BUILD_WITH_WAYLAND
 
 // graphics API backend
 #cmakedefine _NBL_COMPILE_WITH_OPENGL_

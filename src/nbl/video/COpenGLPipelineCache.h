@@ -6,11 +6,11 @@
 #define __NBL_VIDEO_C_OPENGL_PIPELINE_CACHE_H_INCLUDED__
 
 #include "nbl/video/IGPUPipelineCache.h"
-#include "COpenGLExtensionHandler.h"
 #include "nbl/video/COpenGLSpecializedShader.h"
 #include "nbl/video/COpenGLPipelineLayout.h"
 #include "nbl/core/Types.h"
 #include "spirv_cross/spirv_parser.hpp"
+#include "nbl/video/IOpenGL_FunctionTable.h"
 #include <array>
 
 namespace nbl { namespace video
@@ -30,6 +30,8 @@ public:
 		bool operator<(const SCacheKey& _rhs) const;
 	};
 
+	using IGPUPipelineCache::IGPUPipelineCache;
+
 	void merge(uint32_t _count, const IGPUPipelineCache** _srcCaches) override
 	{
 		const std::lock_guard<std::mutex> _1_(m_bin_cache_mutex);
@@ -48,7 +50,7 @@ public:
 		}
 	}
 
-	core::smart_refctd_ptr<asset::ICPUPipelineCache> convertToCPUCache() const override;
+	core::smart_refctd_ptr<asset::ICPUPipelineCache> convertToCPUCache(IOpenGL_FunctionTable* gl) const;
 
 	COpenGLSpecializedShader::SProgramBinary find(const SCacheKey& _key) const
 	{

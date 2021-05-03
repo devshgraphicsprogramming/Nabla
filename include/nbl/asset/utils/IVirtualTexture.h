@@ -163,7 +163,7 @@ public:
 
     struct NBL_FORCE_EBO SMasterTextureData : STextureData<SMasterTextureData> 
     {
-        friend class this_type;
+        friend this_type;
     private:
         SMasterTextureData() = default;
     };
@@ -171,7 +171,7 @@ public:
 
     struct NBL_FORCE_EBO SViewAliasTextureData : STextureData<SViewAliasTextureData>
     {
-        friend class this_type;
+        friend this_type;
     private:
         SViewAliasTextureData() = default;
     };
@@ -521,7 +521,7 @@ protected:
                 return found->second;
 
             typename image_view_t::SCreationParams params;
-            params.flags = static_cast<IImageView<image_t>::E_CREATE_FLAGS>(0);
+            params.flags = static_cast<typename IImageView<image_t>::E_CREATE_FLAGS>(0);
             params.format = _format;
             params.subresourceRange.aspectMask = static_cast<IImage::E_ASPECT_FLAGS>(0);
             params.subresourceRange.baseArrayLayer = 0u;
@@ -691,7 +691,7 @@ protected:
     auto createPageTableViewCreationParams() const
     {
         typename image_view_t::SCreationParams params;
-        params.flags = static_cast<image_view_t::E_CREATE_FLAGS>(0);
+        params.flags = static_cast<typename image_view_t::E_CREATE_FLAGS>(0);
         params.format = m_pageTable->getCreationParameters().format;
         params.subresourceRange.aspectMask = static_cast<IImage::E_ASPECT_FLAGS>(0);
         params.subresourceRange.baseArrayLayer = 0u;
@@ -709,9 +709,9 @@ protected:
     {
         if (_subres.layerCount != 1u)
             return false;
-        if (SMasterTextureData::ETC_to_EWM(_uwrap)!=static_cast<SMasterTextureData::E_WRAP_MODE>(_addr.wrap_x))
+        if (SMasterTextureData::ETC_to_EWM(_uwrap)!=static_cast<typename SMasterTextureData::E_WRAP_MODE>(_addr.wrap_x))
             return false;
-        if (SMasterTextureData::ETC_to_EWM(_vwrap)!=static_cast<SMasterTextureData::E_WRAP_MODE>(_addr.wrap_y))
+        if (SMasterTextureData::ETC_to_EWM(_vwrap)!=static_cast<typename SMasterTextureData::E_WRAP_MODE>(_addr.wrap_y))
             return false;
         return true;
     }
@@ -805,7 +805,7 @@ public:
             storage->deferredInitialization(tileExtent);
         }
 
-        auto initSampler = [this](SamplerArray::Sampler& s)
+        auto initSampler = [this](typename SamplerArray::Sampler& s)
         {
             const E_FORMAT format = s.format;
             const E_FORMAT_CLASS fc = getFormatClass(format);
@@ -815,7 +815,7 @@ public:
             IVTResidentStorage* storage = found->second.get();
             s.view = storage->createView(format);
         };
-        for (SamplerArray::Sampler& s : m_fsamplers.views)
+        for (typename SamplerArray::Sampler& s : m_fsamplers.views)
         {
             if (s.view)
                 continue;
@@ -848,11 +848,11 @@ public:
             else
                 views = &m_usamplers;
             auto views_rng = views->getViews();
-            auto view_it = std::find_if(views_rng.begin(), views_rng.end(), [format](const SamplerArray::Sampler& s) {return s.format == format;});
+            auto view_it = std::find_if(views_rng.begin(), views_rng.end(), [format](const typename SamplerArray::Sampler& s) {return s.format == format;});
             if (view_it == views_rng.end()) //no physical page texture view/sampler for requested format
             {
                 smplrIndex = views->views.size();
-                SamplerArray::Sampler sampler{ format, nullptr };
+                typename SamplerArray::Sampler sampler{ format, nullptr };
                 views->views.push_back(sampler);
             }
             else

@@ -24,7 +24,7 @@ class DefaultFuncPtrLoader final : FuncPtrLoader
 {
 	protected:
 		#if defined(_NBL_WINDOWS_API_)
-			HINSTANCE lib;
+			HMODULE lib;
 		#elif defined(_NBL_POSIX_API_)
 			void* lib;
 		#endif
@@ -70,11 +70,15 @@ class DefaultFuncPtrLoader final : FuncPtrLoader
 
 		inline void* loadFuncPtr(const char* funcname) override final
 		{
+			if (isLibraryLoaded())
+			{
 			#if defined(_NBL_WINDOWS_API_)
 				return GetProcAddress(lib,funcname);
 			#elif defined(_NBL_POSIX_API_)
 				return dlsym(lib,funcname);
 			#endif
+			}
+			return nullptr;
 		}
 };
 

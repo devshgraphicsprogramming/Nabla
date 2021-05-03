@@ -11,12 +11,11 @@
 #include "nbl/core/containers/refctd_dynamic_array.h"
 
 #include "nbl/asset/ICPUSpecializedShader.h"
+#include "nbl/video/IGPUSpecializedShader.h"
 #include "nbl/asset/utils/CShaderIntrospector.h"
-
 #include "nbl/video/COpenGLShader.h"
 #include "nbl/video/IGPUSpecializedShader.h"
 #include "nbl/video/COpenGLPipelineLayout.h"
-#include "COpenGLExtensionHandler.h"
 
 #include "spirv_cross/spirv_glsl.hpp"
 
@@ -27,6 +26,8 @@ namespace nbl
 {
 namespace video
 {
+
+class IOpenGL_FunctionTable;
 
 class COpenGLSpecializedShader : public core::impl::ResolveAlignment<IGPUSpecializedShader,core::AllocationOverrideBase<128> >
 {
@@ -100,11 +101,11 @@ class COpenGLSpecializedShader : public core::impl::ResolveAlignment<IGPUSpecial
 			return true;
 		}
 
-		COpenGLSpecializedShader(uint32_t _GLSLversion, const asset::ICPUBuffer* _spirv, const asset::ISpecializedShader::SInfo& _specInfo, core::vector<SUniform>&& uniformList);
+		COpenGLSpecializedShader(ILogicalDevice* dev, uint32_t _GLSLversion, const asset::ICPUBuffer* _spirv, const asset::ISpecializedShader::SInfo& _specInfo, core::vector<SUniform>&& uniformList);
 
 		inline GLenum getOpenGLStage() const { return m_GLstage; }
 
-		std::pair<GLuint, SProgramBinary> compile(const COpenGLPipelineLayout* _layout, const spirv_cross::ParsedIR* _parsedSpirv) const;
+		std::pair<GLuint, SProgramBinary> compile(IOpenGL_FunctionTable* gl, bool needClipControlWorkaround, const COpenGLPipelineLayout* _layout, const spirv_cross::ParsedIR* _parsedSpirv) const;
 
 		const SInfo& getSpecializationInfo() const { return m_specInfo; }
 		const std::array<uint64_t, 4>& getSpirvHash() const { return m_spirvHash; }
@@ -116,7 +117,7 @@ class COpenGLSpecializedShader : public core::impl::ResolveAlignment<IGPUSpecial
 		~COpenGLSpecializedShader() = default;
 
 	private:
-		void gatherUniformLocations(GLuint _GLname) const;
+		void gatherUniformLocations(IOpenGL_FunctionTable* gl, GLuint _GLname) const;
 
 		GLenum m_GLstage;
 

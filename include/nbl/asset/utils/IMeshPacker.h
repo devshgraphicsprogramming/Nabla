@@ -254,7 +254,6 @@ protected:
         }
 
         //TODO: cache optimization
-
         //copy indices into unified index buffer
         for (size_t i = 0; i < batch.triangles.size(); i++)
         {

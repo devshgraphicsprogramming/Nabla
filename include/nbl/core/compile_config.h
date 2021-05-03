@@ -9,6 +9,7 @@
 #define NABLA_VERSION_MAJOR 0
 #define NABLA_VERSION_MINOR 3
 #define NABLA_VERSION_REVISION 0
+#define NABLA_VERSION_INTEGER (NABLA_VERSION_MAJOR*100 + NABLA_VERSION_MINOR*10 + NABLA_VERSION_REVISION)
 // This flag will be defined only in SVN, the official release code will have
 // it undefined
 //#define IRRLICHT_VERSION_SVN -alpha
@@ -16,16 +17,19 @@
 
 #include <stdio.h> // TODO: Although included elsewhere this is required at least for mingw
 
+//#define _NBL_TEST_WAYLAND
+
 // this actually includes file depending on build type (Debug/Release)
 #include "BuildConfigOptions.h"
 
-#if defined(_NBL_PLATFORM_LINUX_)
+#if defined(_NBL_PLATFORM_LINUX_)// || defined(_NBL_PLATFORM_LINUX_)
 #   define _NBL_POSIX_API_
 #endif
 
 #if defined(_NBL_PLATFORM_WINDOWS_)
 #   define _NBL_WINDOWS_API_
-#   define _NBL_COMPILE_WITH_WINDOWS_DEVICE_
+#elif defined(_NBL_PLATFORM_ANDROID_)
+#   define _NBL_ANDROID_API_
 #endif
 
 #ifdef _NBL_TARGET_ARCH_ARM_

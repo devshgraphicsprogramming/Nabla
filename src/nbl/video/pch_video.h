@@ -8,6 +8,8 @@
 #include "nbl/video/video.h"
 
 // private headers
+#ifndef _NBL_PCH_IGNORE_PRIVATE_HEADERS
+
 #include "nbl/video/COpenGLShader.h"
 #include "nbl/video/COpenGLSpecializedShader.h"
 #include "nbl/video/COpenGLBufferView.h"
@@ -17,5 +19,21 @@
 #include "nbl/video/COpenGLPipelineLayout.h"
 #include "nbl/video/COpenGLRenderpassIndependentPipeline.h"
 #include "nbl/video/COpenGLDescriptorSet.h"
+#include "nbl/video/COpenGLPhysicalDevice.h"
+#include "nbl/video/COpenGLESPhysicalDevice.h"
+#include "nbl/video/COpenGLLogicalDevice.h"
+#include "nbl/video/COpenGLESLogicalDevice.h"
+#include "nbl/video/COpenGL_Queue.h"
+#include "nbl/video/COpenGLRenderpass.h"
+#include "nbl/video/COpenGLFramebuffer.h"
+#include "nbl/video/COpenGLSwapchain.h"
+#include "nbl/video/COpenGLESSwapchain.h"
+#include "nbl/video/COpenGLCommandBuffer.h"
+#include "nbl/video/COpenGLCommandPool.h"
+#include "nbl/video/COpenGLSemaphore.h"
+#include "nbl/video/COpenGLEvent.h"
+#include "nbl/video/COpenGLFence.h"
+
+#endif //_NBL_PCH_IGNORE_PRIVATE_HEADERS
 
 #endif

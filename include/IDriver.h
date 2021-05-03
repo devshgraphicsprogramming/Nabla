@@ -8,7 +8,7 @@
 
 #include "nbl/asset/asset.h"
 #include "nbl/video/asset_traits.h"
-#include "nbl/video/alloc/StreamingTransientDataBuffer.h"
+//#include "nbl/video/alloc/StreamingTransientDataBuffer.h"
 
 namespace nbl
 {
@@ -44,11 +44,12 @@ Examples of such functionality are the creation of buffers, textures, etc.*/
 class IDriver : public virtual core::IReferenceCounted, public IVideoCapabilityReporter, public core::QuitSignalling
 {
     protected:
-		core::smart_refctd_ptr<StreamingTransientDataBufferMT<> > defaultDownloadBuffer;
-		core::smart_refctd_ptr<StreamingTransientDataBufferMT<> > defaultUploadBuffer;
-        IrrlichtDevice* m_device;
+        asset::IAssetManager* m_assetMgr;
+		//core::smart_refctd_ptr<StreamingTransientDataBufferMT<> > defaultDownloadBuffer;
+		//core::smart_refctd_ptr<StreamingTransientDataBufferMT<> > defaultUploadBuffer;
 
-        inline IDriver(IrrlichtDevice* _dev) : IVideoCapabilityReporter(), defaultDownloadBuffer(nullptr), defaultUploadBuffer(nullptr), m_device{_dev} {}
+        inline IDriver(asset::IAssetManager* assmgr) : IVideoCapabilityReporter(), m_assetMgr(assmgr)//, defaultDownloadBuffer(nullptr), defaultUploadBuffer(nullptr) 
+        {}
 
         virtual ~IDriver()
         {
@@ -227,7 +228,7 @@ class IDriver : public virtual core::IReferenceCounted, public IVideoCapabilityR
 		{
 			auto retval = createDeviceLocalGPUBufferOnDedMem(size);
 
-			updateBufferRangeViaStagingBuffer(retval.get(), 0u, size, data);
+			//updateBufferRangeViaStagingBuffer(retval.get(), 0u, size, data);
 
 			return retval;
 		}
@@ -326,7 +327,7 @@ class IDriver : public virtual core::IReferenceCounted, public IVideoCapabilityR
         }
 
         virtual core::smart_refctd_ptr<IGPUPipelineCache> createGPUPipelineCache() { return nullptr; }
-
+/*
         //!
         virtual StreamingTransientDataBufferMT<>* getDefaultDownStreamingBuffer() {return defaultDownloadBuffer.get();}
 
@@ -360,7 +361,7 @@ class IDriver : public virtual core::IReferenceCounted, public IVideoCapabilityR
             // TODO: for other threads to play nice.
             //glFlush();
         }
-
+*/
 
 		//! Fill out the descriptor sets with descriptors
 		virtual void updateDescriptorSets(uint32_t descriptorWriteCount, const IGPUDescriptorSet::SWriteDescriptorSet* pDescriptorWrites, uint32_t descriptorCopyCount, const IGPUDescriptorSet::SCopyDescriptorSet* pDescriptorCopies) {}

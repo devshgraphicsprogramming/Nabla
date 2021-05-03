@@ -36,54 +36,75 @@ add_subdirectory(openssl openssl EXCLUDE_FROM_ALL)
 # volk
 if (Vulkan_FOUND)
 	set(VOLK_PULL_IN_VULKAN ON)
+	if (WIN32)
+		set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_WIN32_KHR)
+	endif()
 	add_subdirectory(volk volk EXCLUDE_FROM_ALL)
 endif(Vulkan_FOUND)
 
 # SDL2
-set(SDL_STATIC_ENABLED_BY_DEFAULT ON)
-set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
-set(SDL_THREADS_ENABLED_BY_DEFAULT OFF)
-set(SDL_LOADSO_ENABLED_BY_DEFAULT ON)
-# should I enable this
-set(SDL_DLOPEN_ENABLED_BY_DEFAULT OFF)
-set(SDL_SUBSYSTEMS "Audio Video Events Joystick Haptic Power Loadso CPUinfo Filesystem Sensor")
-set(SDL_STATIC_PIC ON)
-set(SDL_ATOMIC OFF)
-set(SDL_FILESYSTEM OFF)
-set(SDL_TIMERS OFF)
-# oh why doesn't SDL2 prefix these options?
-set(MMX OFF)
-set(3DNOW OFF)
-set(VIDEO_DIRECTFB OFF)
-set(VIDEO_OPENGL ON)
-set(PTHREADS OFF)
-set(RENDER_D3D OFF)
-set(RENDER_METAL OFF)
-set(VIDEO_VIVANTE OFF)
-# Metal?
-set(VIDEO_KMSDRM OFF)
-set(VIDEO_OFFSCREEN ON)
-set(VIDEO_X11_XCURSOR ON)
-set(VIDEO_X11_XINERAMA OFF)
-set(VIDEO_X11_XINPUT ON)
-set(VIDEO_X11_XRANDR ON)
-set(VIDEO_X11_XSCRNSAVER ON)
-set(VIDEO_X11_XSHAPE ON)
-set(VIDEO_X11_XVM OFF)
-# make sure as much gets shared as possible
-set(OSS OFF)
-set(ALSA_SHARED ON)
-set(JACK_SHARED ON)
-set(ESD_SHARED ON)
-set(PULSEAUDIO_SHARED ON)
-set(ARTS_SHARED ON)
-set(NAS_SHARED ON)
-set(SNDIO_SHARED ON)
-set(FUSIONSOUND_SHARED ON)
-set(LIBSAMPLERATE_SHARED ON)
-set(WAYLAND_SHARED ON)
-set(X11_SHARED ON)
-add_subdirectory(SDL2 SDL2 EXCLUDE_FROM_ALL)
+if (NBL_COMPILE_WITH_SDL2)
+	set(SDL_STATIC_ENABLED_BY_DEFAULT ON)
+	set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
+	set(SDL_THREADS_ENABLED_BY_DEFAULT OFF)
+	set(SDL_LOADSO_ENABLED_BY_DEFAULT ON)
+	# should I enable this
+	set(SDL_DLOPEN_ENABLED_BY_DEFAULT OFF)
+	set(SDL_SUBSYSTEMS "Audio Video Events Joystick Haptic Power Loadso CPUinfo Filesystem Sensor")
+	set(SDL_STATIC_PIC ON)
+	set(SDL_ATOMIC OFF)
+	set(SDL_FILESYSTEM OFF)
+	set(SDL_TIMERS OFF)
+	# oh why doesn't SDL2 prefix these options?
+	set(MMX OFF)
+	set(3DNOW OFF)
+	set(VIDEO_DIRECTFB OFF)
+	set(VIDEO_OPENGL ON)
+	set(PTHREADS OFF)
+	set(RENDER_D3D OFF)
+	set(RENDER_METAL OFF)
+	set(VIDEO_VIVANTE OFF)
+	# Metal?
+	set(VIDEO_KMSDRM OFF)
+	set(VIDEO_OFFSCREEN ON)
+	set(VIDEO_X11_XCURSOR ON)
+	set(VIDEO_X11_XINERAMA OFF)
+	set(VIDEO_X11_XINPUT ON)
+	set(VIDEO_X11_XRANDR ON)
+	set(VIDEO_X11_XSCRNSAVER ON)
+	set(VIDEO_X11_XSHAPE ON)
+	set(VIDEO_X11_XVM OFF)
+	# make sure as much gets shared as possible
+	set(OSS OFF)
+	set(ALSA_SHARED ON)
+	set(JACK_SHARED ON)
+	set(ESD_SHARED ON)
+	set(PULSEAUDIO_SHARED ON)
+	set(ARTS_SHARED ON)
+	set(NAS_SHARED ON)
+	set(SNDIO_SHARED ON)
+	set(FUSIONSOUND_SHARED ON)
+	set(LIBSAMPLERATE_SHARED ON)
+	set(WAYLAND_SHARED ON)
+	set(X11_SHARED ON)
+	add_subdirectory(SDL2 SDL2 EXCLUDE_FROM_ALL)
+endif()
+
+find_package(OpenGL OPTIONAL_COMPONENTS EGL)
+find_package(Wayland)
+#[[if (OpenGL_EGL_FOUND)
+	message(FATAL_ERROR "FOUND EGL!!")
+else()
+	message(FATAL_ERROR "COULDNT FIND EGL!!")
+endif()]]
+# EGL
+set(EGL_NO_GLEW ON FORCE)
+#if (OpenGL_EGL_FOUND AND WAYLAND_CLIENT_FOUND AND UNIX AND NOT APPLE)
+#	set(EGL_PASSTHROUGH ON FORCE)
+#	set(EGL_USE_WAYLAND ON FORCE)
+#endif()
+set(EGL_USE_WAYLAND OFF FORCE)
+add_subdirectory(EGL/EGL)
 
 # zlib (target is zlibstatic)
 set(_OLD_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
@@ -156,19 +177,22 @@ add_subdirectory(libpng libpng EXCLUDE_FROM_ALL)
 add_dependencies(png_static zlibstatic) #CMake doesn't get it itself
 
 #openexr
-set(_OLD_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
-set(_OLD_BUILD_STATIC_LIBS ${BUILD_STATIC_LIBS})
-set(_OLD_BUILD_TESTING ${BUILD_TESTING})
-set(BUILD_SHARED_LIBS OFF)
-set(BUILD_STATIC_LIBS OFF)
-set(BUILD_TESTING OFF)
-set(PYILMBASE_ENABLE OFF CACHE STRING "" FORCE)
-set(OPENEXR_BUILD_UTILS OFF CACHE STRING "" FORCE)
-set(OPENEXR_VIEWERS_ENABLE OFF CACHE STRING "" FORCE)
-add_subdirectory(openexr openexr EXCLUDE_FROM_ALL)
-set(BUILD_SHARED_LIBS ${_OLD_BUILD_SHARED_LIBS})
-set(BUILD_STATIC_LIBS ${_OLD_BUILD_STATIC_LIBS})
-set(BUILD_TESTING ${_OLD_BUILD_TESTING})
+option(_NBL_COMPILE_WITH_OPEN_EXR_ "Build with OpenEXR library" ON)
+if (_NBL_COMPILE_WITH_OPEN_EXR_)
+	set(_OLD_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+	set(_OLD_BUILD_STATIC_LIBS ${BUILD_STATIC_LIBS})
+	set(_OLD_BUILD_TESTING ${BUILD_TESTING})
+	set(BUILD_SHARED_LIBS OFF)
+	set(BUILD_STATIC_LIBS OFF)
+	set(BUILD_TESTING OFF)
+	set(PYILMBASE_ENABLE OFF CACHE STRING "" FORCE)
+	set(OPENEXR_BUILD_UTILS OFF CACHE STRING "" FORCE)
+	set(OPENEXR_VIEWERS_ENABLE OFF CACHE STRING "" FORCE)
+	add_subdirectory(openexr openexr EXCLUDE_FROM_ALL)
+	set(BUILD_SHARED_LIBS ${_OLD_BUILD_SHARED_LIBS})
+	set(BUILD_STATIC_LIBS ${_OLD_BUILD_STATIC_LIBS})
+	set(BUILD_TESTING ${_OLD_BUILD_TESTING})
+endif()
 
 #gli
 option(_NBL_COMPILE_WITH_GLI_ "Build with GLI library" ON)
@@ -456,10 +480,6 @@ set(NBL_3RDPARTY_TARGETS
 				shaderc_util
 				shaderc
 				jpeg
-				Imath
-				IlmThread
-				IlmImf
-				Half
 				convert_utf
 				bzip2			
 				glslang
@@ -468,10 +488,19 @@ set(NBL_3RDPARTY_TARGETS
 				MachineIndependent
 				GenericCodeGen
 				SPIRV 
-				Iex
-				IexMath
 				SPIRV-Tools
-				SPIRV-Tools-opt )
+				SPIRV-Tools-opt
+				egl )
+if (_NBL_COMPILE_WITH_OPEN_EXR_)
+	list(APPEND NBL_3RDPARTY_TARGETS
+		Imath
+		IlmThread
+		IlmImf
+		Half
+		Iex
+		IexMath
+	)
+endif()
 #TODO insert more targets that are conditionally built
 if (NBL_BUILD_MITSUBA_LOADER)
 	list(APPEND NBL_3RDPARTY_TARGETS expat)

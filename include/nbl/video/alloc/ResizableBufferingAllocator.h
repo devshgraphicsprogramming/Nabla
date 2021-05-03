@@ -6,9 +6,11 @@
 #define __NBL_VIDEO_RESIZABLE_BUFFERING_ALLOCATOR_H__
 
 
+#if 0
 #include "nbl/core/alloc/MultiBufferingAllocatorBase.h"
 #include "nbl/core/alloc/ResizableHeterogenousMemoryAllocator.h"
 #include "nbl/video/alloc/HostDeviceMirrorBufferAllocator.h"
+#include "nbl/video/alloc/SubAllocatedDataBuffer.h"
 
 namespace nbl
 {
@@ -20,13 +22,13 @@ class ResizableBufferingAllocatorST : public core::MultiBufferingAllocatorBase<B
                                                             protected SubAllocatedDataBuffer<core::ResizableHeterogenousMemoryAllocator<core::HeterogenousMemoryAddressAllocatorAdaptor<BasicAddressAllocator,HostDeviceMirrorBufferAllocator<>,CPUAllocator> >,CustomDeferredFreeFunctor>,
                                                             public virtual core::IReferenceCounted
 {
-        typedef core::MultiBufferingAllocatorBase<BasicAddressAllocator,onlySwapRangesMarkedDirty>                                                                                                                                                                                          MultiBase;
-        typedef SubAllocatedDataBuffer<core::ResizableHeterogenousMemoryAllocator<core::HeterogenousMemoryAddressAllocatorAdaptor<BasicAddressAllocator,HostDeviceMirrorBufferAllocator<>,CPUAllocator> > > Base;
+        using MultiBase = core::MultiBufferingAllocatorBase<BasicAddressAllocator,onlySwapRangesMarkedDirty>;
+        using Base = SubAllocatedDataBuffer<core::ResizableHeterogenousMemoryAllocator<core::HeterogenousMemoryAddressAllocatorAdaptor<BasicAddressAllocator,HostDeviceMirrorBufferAllocator<>,CPUAllocator> > >;
     protected:
         virtual ~ResizableBufferingAllocatorST() {}
     public:
-        typedef typename Base::size_type    size_type;
-        static constexpr size_type                  invalid_address = Base::invalid_address;
+        using size_type = typename Base::size_type;
+        static constexpr size_type invalid_address = Base::invalid_address;
 
         template<typename... Args>
         ResizableBufferingAllocatorST(IDriver* inDriver, const CPUAllocator& reservedMemAllocator, Args&&... args) :
@@ -84,10 +86,20 @@ class ResizableBufferingAllocatorST : public core::MultiBufferingAllocatorBase<B
             MultiBase::resetPushRange();
             return true;
         }
+        static inline void* operator new(size_t size)                noexcept {return (Base::operator new(size));}
+        static inline void* operator new[](size_t size)              noexcept {return Base::operator new[](size);}
+        static inline void* operator new(size_t size, void* where)   noexcept {return (Base::operator new(size,where));}
+        static inline void* operator new[](size_t size, void* where) noexcept {return Base::operator new[](size,where);}
+        static inline void operator delete(void* ptr)                noexcept {Base::operator delete(ptr);}
+        static inline void operator delete[](void* ptr)              noexcept {Base::operator delete[](ptr);}
+        static inline void operator delete(void* ptr, size_t size)   noexcept {Base::operator delete(ptr,size);}
+        static inline void operator delete[](void* ptr, size_t size) noexcept {Base::operator delete[](ptr,size);}
+
 };
 
 }
 }
+#endif
 
 #endif
 

@@ -6,9 +6,8 @@
 #define __NBL_VIDEO_C_OPENGL_PIPELINE_LAYOUT_H_INCLUDED__
 
 #include "nbl/video/IGPUPipelineLayout.h"
-#include "COpenGLExtensionHandler.h"
+#include "nbl/video/IOpenGL_FunctionTable.h"
 
-#ifdef _NBL_COMPILE_WITH_OPENGL_
 namespace nbl
 {
 namespace video
@@ -32,10 +31,11 @@ public:
     };
 
     COpenGLPipelineLayout(
+        ILogicalDevice* dev,
         const asset::SPushConstantRange* const _pcRangesBegin, const asset::SPushConstantRange* const _pcRangesEnd,
         core::smart_refctd_ptr<IGPUDescriptorSetLayout>&& _layout0, core::smart_refctd_ptr<IGPUDescriptorSetLayout>&& _layout1,
         core::smart_refctd_ptr<IGPUDescriptorSetLayout>&& _layout2, core::smart_refctd_ptr<IGPUDescriptorSetLayout>&& _layout3
-    ) : IGPUPipelineLayout(_pcRangesBegin, _pcRangesEnd, std::move(_layout0), std::move(_layout1), std::move(_layout2), std::move(_layout3))
+    ) : IGPUPipelineLayout(dev, _pcRangesBegin, _pcRangesEnd, std::move(_layout0), std::move(_layout1), std::move(_layout2), std::move(_layout3))
     {
         SMultibindParams params;
 
@@ -79,6 +79,5 @@ private:
 
 }
 }
-#endif
 
 #endif

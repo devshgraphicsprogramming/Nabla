@@ -181,7 +181,7 @@ core::smart_refctd_ptr<ICPUImage> createAndconvertImageData(ICPUImage::SCreation
 	{
 		using CONVERSION_FILTER = CConvertFormatImageFilter<srcFormat, destFormat>;
 		CONVERSION_FILTER convertFilter;
-		CONVERSION_FILTER::state_type state;
+		typename CONVERSION_FILTER::state_type state;
 		{
 			auto referenceImageParams = inputCreationImage->getCreationParameters();
 			auto referenceBuffer = inputCreationImage->getBuffer();
@@ -291,7 +291,7 @@ asset::SAssetBundle CImageLoaderTGA::loadAsset(io::IReadFile* _file, const asset
 			return {};
 		}
 		case STIT_UNCOMPRESSED_RGB_IMAGE: [[fallthrough]];
-		case STIT_UNCOMPRESSED_GRAYSCALE_IMAGE: [[fallthrough]];
+		case STIT_UNCOMPRESSED_GRAYSCALE_IMAGE:
 		{
 			region.bufferRowLength = calcPitchInBlocks(region.imageExtent.width, getTexelOrBlockBytesize(EF_R8G8B8_SRGB));
 			const int32_t imageSize = endBufferSize = region.imageExtent.height * region.bufferRowLength * bytesPerTexel;

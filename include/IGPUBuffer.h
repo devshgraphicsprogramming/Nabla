@@ -8,6 +8,7 @@
 #include "nbl/asset/IBuffer.h"
 #include "IDriverMemoryBacked.h"
 #include "nbl/asset/IDescriptor.h"
+#include "nbl/video/IBackendObject.h"
 
 namespace nbl
 {
@@ -18,10 +19,10 @@ namespace video
 /** For additional OpenGL DSA state-free operations such as flushing mapped ranges or
 buffer to buffer copies, one needs a command buffer in Vulkan as these operations are
 performed by the GPU and not wholly by the driver, so look for them in IDriver and IVideoDriver. */
-class IGPUBuffer : public asset::IBuffer, public IDriverMemoryBacked
+class IGPUBuffer : public asset::IBuffer, public IDriverMemoryBacked, public IBackendObject
 {
     protected:
-        IGPUBuffer(const IDriverMemoryBacked::SDriverMemoryRequirements& reqs) : IDriverMemoryBacked(reqs) {}
+        IGPUBuffer(ILogicalDevice* dev, const IDriverMemoryBacked::SDriverMemoryRequirements& reqs) : IDriverMemoryBacked(reqs), IBackendObject(dev) {}
 
     public:
         //! Get usable buffer byte size.
@@ -29,24 +30,6 @@ class IGPUBuffer : public asset::IBuffer, public IDriverMemoryBacked
 
         //! Whether calling updateSubRange will produce any effects.
         virtual bool canUpdateSubRange() const = 0;
-
-        //deprecated, delegate this to command buffer
-        virtual void updateSubRange(const IDriverMemoryAllocation::MemoryRange& memrange, const void* data) = 0;
-
-
-        //! A C++11 style move assignment, used for reallocation-like functionality.
-        /** Only ICPUBuffer has a reallocate method, since IGPUBuffer needs an IDriverMemoryAllocation.
-        In the future we may change this API, but the reallocation function would need to either take a
-        memory allocator class and be able to free its current allocation from the old allocator.
-        So if you can provide an already created and allocated IGPUBuffer, we can move its data members
-        from `other` to `this`. However the method does not change the reference count of `other`,
-        the `other` is simply made into an empty IGPUBuffer in a state similar to what it would be if it
-        failed both creation and memory allocation binding. This is why I reccommend that `other` have a
-        reference count of 1 and is not used or bound to any other resource such as a graphics pipeline
-        or a texture buffer object. One can reallocate an IGPUBuffer like this:
-        `{auto rep = Driver->createGPUBufferOnDedMem(newReqs, ... ); A->pseudoMoveAssign(rep); rep->drop();}`
-        \returns true on success, method can fail for a number of reasons such as passing `other==this` .*/
-        virtual bool pseudoMoveAssign(IGPUBuffer* other) = 0;
 };
 
 } // end namespace scene
