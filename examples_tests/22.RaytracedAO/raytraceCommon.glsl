@@ -214,71 +214,89 @@ nbl_glsl_xoroshiro64star_state_t load_aux_vertex_attrs(
 	return scramble_start_state;
 }
 
-void generate_next_rays(
-	in uint maxRaysToGen, in nbl_glsl_MC_oriented_material_t material, in bool frontfacing, in uint vertex_depth,
-	in nbl_glsl_xoroshiro64star_state_t scramble_start_state, in uint sampleID, in uvec2 outPixelLocation,
-	in vec3 origin, vec3 geomNormal, in vec3 prevThroughput)
+vec3 raytrace_common(
+	in uint maxRaysToGen, in nbl_glsl_ext_Mitsuba_Loader_instance_data_t batchInstanceData, in bool frontfacing, in uint vertex_depth,
+	in uvec3 indices, in vec2 compactBary, in uint sampleID, in uvec2 outPixelLocation,
+	in vec3 origin, in vec3 prevThroughput
+	#ifdef TEX_PREFETCH_STREAM
+		, in mat2 dBarydScreen
+	#endif
+)
 {
-	// get material streams as well
-	const nbl_glsl_MC_instr_stream_t gcs = nbl_glsl_MC_oriented_material_t_getGenChoiceStream(material);
-	const nbl_glsl_MC_instr_stream_t rnps = nbl_glsl_MC_oriented_material_t_getRemAndPdfStream(material);
+	const nbl_glsl_MC_oriented_material_t material = nbl_glsl_MC_material_data_t_getOriented(batchInstanceData.material,frontfacing);
+	const vec3 emissive = nbl_glsl_MC_oriented_material_t_getEmissive(material);
+	if (maxRaysToGen!=0u)
+	{
+		const uint vertex_depth_mod_2 = vertex_depth&0x1u;
+		// if we ever support spatially varying emissive, we'll need to hoist barycentric computation and UV fetching to the position fetching
+		/*const */nbl_glsl_xoroshiro64star_state_t scramble_start_state = load_aux_vertex_attrs(
+			compactBary,indices,batchInstanceData,
+			material,outPixelLocation,vertex_depth_mod_2
+			#ifdef TEX_PREFETCH_STREAM
+				,dBarydScreen
+			#endif
+		);
+		// get material streams as well
+		const nbl_glsl_MC_instr_stream_t gcs = nbl_glsl_MC_oriented_material_t_getGenChoiceStream(material);
+		const nbl_glsl_MC_instr_stream_t rnps = nbl_glsl_MC_oriented_material_t_getRemAndPdfStream(material);
 
-
-	// need to do this after we have worldspace V and N ready
-	const nbl_glsl_MC_precomputed_t precomputed = nbl_glsl_MC_precomputeData(frontfacing);
-#ifdef NORM_PRECOMP_STREAM
-	const nbl_glsl_MC_instr_stream_t nps = nbl_glsl_MC_oriented_material_t_getNormalPrecompStream(material);
-	nbl_glsl_MC_runNormalPrecompStream(nps,precomputed);
-#endif
+		// need to do this after we have worldspace V and N ready
+		const nbl_glsl_MC_precomputed_t precomputed = nbl_glsl_MC_precomputeData(frontfacing);
+	#ifdef NORM_PRECOMP_STREAM
+		const nbl_glsl_MC_instr_stream_t nps = nbl_glsl_MC_oriented_material_t_getNormalPrecompStream(material);
+		nbl_glsl_MC_runNormalPrecompStream(nps,precomputed);
+	#endif
 	
-	const uint vertex_depth_mod_2 = vertex_depth&0x1u;
-	const uint vertex_depth_mod_2_inv = vertex_depth_mod_2^0x1u;
-	// prepare rays
-	uint raysToAllocate = 0u;
-	float maxT[MAX_RAYS_GENERATED]; vec3 direction[MAX_RAYS_GENERATED]; vec3 nextThroughput[MAX_RAYS_GENERATED];	
-for (uint i=1u; i!=vertex_depth; i++)
-{
-	nbl_glsl_xoroshiro64star(scramble_start_state);
-	nbl_glsl_xoroshiro64star(scramble_start_state);
-	nbl_glsl_xoroshiro64star(scramble_start_state);
-}
-	for (uint i=0u; i<maxRaysToGen; i++)
+		// prepare rays
+		uint raysToAllocate = 0u;
+		float maxT[MAX_RAYS_GENERATED]; vec3 direction[MAX_RAYS_GENERATED]; vec3 nextThroughput[MAX_RAYS_GENERATED];	
+	for (uint i=1u; i!=vertex_depth; i++)
 	{
-		nbl_glsl_xoroshiro64star_state_t scramble_state = scramble_start_state;
-		// TODO: When generating NEE rays, advance the dimension, NOT the sampleID
-		gen_sample_ray(maxT[i],direction[i],nextThroughput[i],scramble_state,sampleID+i,vertex_depth,precomputed,gcs,rnps);
-// TODO: bad idea, invent something else
-//		if (i==0u)
-//			imageStore(scramblebuf,ivec3(outPixelLocation,vertex_depth_mod_2_inv),uvec4(scramble_state,0u,0u));
-		nextThroughput[i] *= prevThroughput;
-		if (any(greaterThan(nextThroughput[i],vec3(FLT_MIN))))
-			raysToAllocate++;
-		else
-			maxT[i] = 0.f;
+		nbl_glsl_xoroshiro64star(scramble_start_state);
+		nbl_glsl_xoroshiro64star(scramble_start_state);
+		nbl_glsl_xoroshiro64star(scramble_start_state);
 	}
-	// TODO: investigate workgroup reductions here
-	const uint baseOutputID = atomicAdd(traceIndirect[vertex_depth_mod_2_inv].rayCount,raysToAllocate);
-	// set up dispatch indirect
-	atomicMax(traceIndirect[vertex_depth_mod_2_inv].params.num_groups_x,(baseOutputID+raysToAllocate-1u)/WORKGROUP_SIZE+1u);
+		const uint vertex_depth_mod_2_inv = vertex_depth_mod_2^0x1u;
+		for (uint i=0u; i<maxRaysToGen; i++)
+		{
+			nbl_glsl_xoroshiro64star_state_t scramble_state = scramble_start_state;
+			// TODO: When generating NEE rays, advance the dimension, NOT the sampleID
+			gen_sample_ray(maxT[i],direction[i],nextThroughput[i],scramble_state,sampleID+i,vertex_depth,precomputed,gcs,rnps);
+	// TODO: bad idea, invent something else
+	//		if (i==0u)
+	//			imageStore(scramblebuf,ivec3(outPixelLocation,vertex_depth_mod_2_inv),uvec4(scramble_state,0u,0u));
+			nextThroughput[i] *= prevThroughput;
+			if (any(greaterThan(nextThroughput[i],vec3(FLT_MIN))))
+				raysToAllocate++;
+			else
+				maxT[i] = 0.f;
+		}
+		// TODO: investigate workgroup reductions here
+		const uint baseOutputID = atomicAdd(traceIndirect[vertex_depth_mod_2_inv].rayCount,raysToAllocate);
+		// set up dispatch indirect
+		atomicMax(traceIndirect[vertex_depth_mod_2_inv].params.num_groups_x,(baseOutputID+raysToAllocate-1u)/WORKGROUP_SIZE+1u);
 
-	// TODO: improve ray offset (maybe using smooth normal wouldn't be a sin)
-	const vec3 absGeomNormal = abs(geomNormal);
-	geomNormal /= max(max(absGeomNormal.x,absGeomNormal.y),absGeomNormal.z);
-	uint offset = 0u;
-	for (uint i=0u; i<maxRaysToGen; i++)
-	if (maxT[i]!=0.f)
-	{
-		nbl_glsl_ext_RadeonRays_ray newRay;
-		newRay.origin = origin+uintBitsToFloat(floatBitsToUint(direction[i])^floatBitsToUint(dot(geomNormal,direction[i]))&0x80000000u)/96.f;
-		newRay.maxT = maxT[i];
-		newRay.direction = direction[i];
-		newRay.time = packOutPixelLocation(outPixelLocation);
-		newRay.mask = -1;
-		newRay._active = 1;
-		newRay.useless_padding[0] = packHalf2x16(nextThroughput[i].rg);
-		newRay.useless_padding[1] = bitfieldInsert(packHalf2x16(nextThroughput[i].bb),sampleID+i,16,16);
-		const uint outputID = baseOutputID+(offset++);
-		rays[vertex_depth_mod_2_inv].data[outputID] = newRay;
+		// TODO: improve ray offset (maybe using smooth normal wouldn't be a sin)
+		vec3 geomNormal = cross(dPdBary[0],dPdBary[1]);
+		const vec3 absGeomNormal = abs(geomNormal);
+		geomNormal /= max(max(absGeomNormal.x,absGeomNormal.y),absGeomNormal.z)*96.f;
+		uint offset = 0u;
+		for (uint i=0u; i<maxRaysToGen; i++)
+		if (maxT[i]!=0.f)
+		{
+			nbl_glsl_ext_RadeonRays_ray newRay;
+			newRay.origin = origin+uintBitsToFloat(floatBitsToUint(geomNormal)^floatBitsToUint(dot(geomNormal,direction[i]))&0x80000000u);
+			newRay.maxT = maxT[i];
+			newRay.direction = direction[i];
+			newRay.time = packOutPixelLocation(outPixelLocation);
+			newRay.mask = -1;
+			newRay._active = 1;
+			newRay.useless_padding[0] = packHalf2x16(nextThroughput[i].rg);
+			newRay.useless_padding[1] = bitfieldInsert(packHalf2x16(nextThroughput[i].bb),sampleID+i,16,16);
+			const uint outputID = baseOutputID+(offset++);
+			rays[vertex_depth_mod_2_inv].data[outputID] = newRay;
+		}
 	}
+	return emissive;
 }
 #endif

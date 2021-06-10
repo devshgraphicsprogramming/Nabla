@@ -47,29 +47,22 @@ void main()
 			const nbl_glsl_ext_Mitsuba_Loader_instance_data_t batchInstanceData = InstData.data[batchInstanceGUID];
 			const uvec3 indices = get_triangle_indices(batchInstanceGUID,triangleID);
 			
-			// get material while waiting for indices
-			const nbl_glsl_MC_oriented_material_t material = nbl_glsl_MC_material_data_t_getOriented(batchInstanceData.material,frontfacing);
-			emissive = nbl_glsl_MC_oriented_material_t_getEmissive(material);
-			
-			const uint vertex_depth_mod_2 = 0x1u;
 			// load vertex data
 			const vec3 last_vx_pos = load_positions(indices,batchInstanceData);
-			const nbl_glsl_xoroshiro64star_state_t scramble_start_state = load_aux_vertex_attrs(compactBary,indices,batchInstanceData,material,outPixelLocation,vertex_depth_mod_2
-#ifdef TEX_PREFETCH_STREAM
-				,dBarydScreen
-#endif
-			);
 			
+			// TODO: fold into raytrace_common
 			const vec3 hitWorldPos = dPdBary*compactBary.xy+last_vx_pos;
 			normalizedV = normalize(pc.cummon.camPos-hitWorldPos);
 
 			// generate rays
 			const uint sampleID = bitfieldExtract(pc.cummon.samplesComputed_depth,0,16);
-			const vec3 geomNormal = cross(dPdBary[0],dPdBary[1]);
 			const uint vertex_depth = 1u;
-			generate_next_rays(
-				staticViewData.samplesPerPixelPerDispatch,material,frontfacing,vertex_depth,
-				scramble_start_state,sampleID,outPixelLocation,hitWorldPos,geomNormal,vec3(1.0)
+			emissive = raytrace_common(
+				staticViewData.samplesPerPixelPerDispatch,batchInstanceData,frontfacing,vertex_depth,
+				indices,compactBary,sampleID,outPixelLocation,hitWorldPos,vec3(1.0)
+				#ifdef TEX_PREFETCH_STREAM
+					,dBarydScreen
+				#endif
 			);
 		}
 
