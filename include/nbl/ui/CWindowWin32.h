@@ -1,15 +1,15 @@
 #ifndef __C_WINDOW_WIN32_H_INCLUDED__
 #define __C_WINDOW_WIN32_H_INCLUDED__
 #include "nbl/ui/IWindowWin32.h"
-#include "os.h"
 #include <queue>
 
 #ifdef _NBL_PLATFORM_WINDOWS_
 
-namespace nbl {
-namespace ui
+namespace nbl::ui
 {
+
 class CWindowManagerWin32;
+
 class CWindowWin32 final : public IWindowWin32
 {
 public:
@@ -76,7 +76,6 @@ private:
 
 };
 
-}
 }
 
 #endif

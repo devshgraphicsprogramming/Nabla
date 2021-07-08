@@ -6,20 +6,15 @@
 
 #include "nbl/system/IFile.h"
 
-#include "os.h"
-
 #include "nbl/asset/format/convertColor.h"
-#include "nbl/asset/ICPUImageView.h"
-#include "nbl/asset/interchange/IImageAssetHandlerBase.h"
 
 
 #ifdef _NBL_COMPILE_WITH_TGA_WRITER_
 
+#include "CImageLoaderTGA.h" // for TGA structs
 #include "CImageWriterTGA.h"
 
-namespace nbl
-{
-namespace asset
+namespace nbl::asset
 {
 
 CImageWriterTGA::CImageWriterTGA(core::smart_refctd_ptr<system::ISystem>&& sys) : m_system(std::move(sys))
@@ -31,8 +26,8 @@ CImageWriterTGA::CImageWriterTGA(core::smart_refctd_ptr<system::ISystem>&& sys) 
 
 bool CImageWriterTGA::writeAsset(system::IFile* _file, const SAssetWriteParams& _params, IAssetWriterOverride* _override)
 {
-    if (!_override)
-        getDefaultOverride(_override);
+	if (!_override)
+		getDefaultOverride(_override);
 
 	SAssetWriteContext ctx{ _params, _file };
 
@@ -112,7 +107,8 @@ bool CImageWriterTGA::writeAsset(system::IFile* _file, const SAssetWriteParams& 
 		break;
 		default:
 		{
-			os::Printer::log("Unsupported color format, operation aborted.", ELL_ERROR);
+			assert(false); // TODO: implement proper engine-wide logger
+		//os::Printer::log("Unsupported color format, operation aborted.", ELL_ERROR);
 			return false;
 		}
 	}
@@ -179,7 +175,6 @@ bool CImageWriterTGA::writeAsset(system::IFile* _file, const SAssetWriteParams& 
 	return imageHeader.ImageHeight <= y;
 }
 
-} // namespace video
-} // namespace nbl
+} // namespace nbl::asset
 
 #endif

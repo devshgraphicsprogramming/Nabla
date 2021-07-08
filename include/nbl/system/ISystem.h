@@ -1,22 +1,25 @@
 #ifndef __NBL_I_SYSTEM_H_INCLUDED__
 #define __NBL_I_SYSTEM_H_INCLUDED__
 
+#include "nbl/core/declarations.h"
+#include "nbl/builtin/common.h"
+
 #include <variant>
-#include "nbl/core/IReferenceCounted.h"
+
 #include "nbl/system/ICancellableAsyncQueueDispatcher.h"
 #include "nbl/system/IFileArchive.h"
 #include "nbl/system/IFile.h"
 #include "nbl/system/CMemoryFile.h"
-#include "CObjectCache.h"
 
-namespace nbl {
-namespace system
+#include "nbl/asset/ICPUBuffer.h" // this is a horrible no-no (circular dependency), `ISystem::loadBuiltinData` should return some other type (probably an `IFile` which is mapped for reading)
+
+namespace nbl::system
 {
 
 class ISystem final : public core::IReferenceCounted
 {
 public:
-    class ISystemCaller : public core::IReferenceCounted
+    class ISystemCaller : public core::IReferenceCounted // why does `ISystemCaller` need to be public?
     {
     protected:
         virtual ~ISystemCaller() = default;
@@ -126,7 +129,7 @@ private:
     struct Loaders {
         core::vector<core::smart_refctd_ptr<IArchiveLoader> > vector;
         //! The key is file extension
-        core::CMultiObjectCache<std::string, core::smart_refctd_ptr<IArchiveLoader>, std::vector> perFileExt;
+        core::CMultiObjectCache<std::string,core::smart_refctd_ptr<IArchiveLoader>,std::vector> perFileExt;
 
         void pushToVector(core::smart_refctd_ptr<IArchiveLoader>&& _loader)
         {
@@ -175,6 +178,7 @@ public:
         return true;
     }
 
+    // TODO: files shall have public read/write methods, and these should be protected, then the `IFile` implementations should call these behind the scenes via a friendship
     bool readFile(future_t<uint32_t>& future, IFile* file, void* buffer, size_t offset, size_t size)
     {
         SRequestParams_READ params;
@@ -201,6 +205,7 @@ public:
     // and implement via m_dispatcher and ISystemCaller if needed
     // (any system calls should take place in ISystemCaller which is called by CAsyncQueue and nothing else)
 
+    // TODO: file views can create themselves, they dont need a factory!
     core::smart_refctd_ptr<IFile> createFileView(const void* data, size_t size, std::underlying_type_t<IFile::E_CREATE_FLAGS> flags, const std::filesystem::path &filename)
     {
         auto fileView = core::make_smart_refctd_ptr<CFileView>(filename, flags);
@@ -282,7 +287,6 @@ public:
     }
 };
 
-}
 }
 
 #endif

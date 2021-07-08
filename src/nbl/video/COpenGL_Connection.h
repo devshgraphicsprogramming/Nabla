@@ -12,17 +12,19 @@
 #elif defined(_NBL_PLATFORM_LINUX_)
 #   include "nbl/ui/IWindowX11.h"
 #   include "nbl/video/surface/CSurfaceGLX11.h"
+#elif defined(_NBL_PLATFORM_ANDROID_)
+#   include "nbl/ui/IWindowAndroid.h"
+#   include "nbl/video/surface/CSurfaceGLAndroid.h"
 #endif // TODO more platforms
 
-namespace nbl {
-namespace video
+namespace nbl::video
 {
 
 template <typename PhysicalDeviceType, E_API_TYPE API_TYPE>
 class COpenGL_Connection final : public IAPIConnection
 {
 public:
-    COpenGL_Connection(SDebugCallback* dbgCb)
+    COpenGL_Connection(const SDebugCallback& dbgCb) : IAPIConnection(dbgCb)
     {
         // would be nice to initialize this in create() and return nullptr on failure
         // but DynamicFunctionCallerBase is unmovable!! why?? So i cannot move into m_egl
@@ -78,6 +80,15 @@ public:
 
             return core::make_smart_refctd_ptr<CSurfaceGLX11>(std::move(params));
         }
+#elif defined(_NBL_PLATFORM_ANDROID_)
+        {
+            ui::IWindowAndroid* win = static_cast<ui::IWindowAndroid*>(window);
+
+            CSurfaceGLAndroid::SCreationParams params;
+            params.anw = win->getNativeHandle();
+
+            return core::make_smart_refctd_ptr<CSurfaceGLAndroid>(std::move(params));
+        }
 #else // TODO more platforms
         return nullptr;
 #endif
@@ -94,7 +105,6 @@ private:
     core::smart_refctd_ptr<IPhysicalDevice> m_pdevice;
 };
 
-}
 }
 
 #endif

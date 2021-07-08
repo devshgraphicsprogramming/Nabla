@@ -2,14 +2,13 @@
 // This file is part of the "Nabla Engine".
 // For conditions of distribution and use, see copyright notice in nabla.h
 
-#include "nbl/core/core.h"
+#include "nbl/core/declarations.h"
 
 #include "nbl/asset/ICPUShader.h"
 
 #include "CSPVLoader.h"
 
 using namespace nbl;
-using namespace nbl::io;
 using namespace nbl::asset;
 
 // load in the image data
