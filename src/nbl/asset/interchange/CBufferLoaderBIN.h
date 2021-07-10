@@ -17,7 +17,7 @@ namespace asset
 class CBufferLoaderBIN final : public asset::IAssetLoader
 {
 	protected:
-		~CBufferLoaderBIN();
+		~CBufferLoaderBIN() {}
 
 	public:
 		bool isALoadableFileFormat(io::IReadFile* _file) const override;
