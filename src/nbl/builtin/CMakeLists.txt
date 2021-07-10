@@ -128,6 +128,7 @@ set(nbl_resources_to_embed
   "nbl/builtin/glsl/workgroup/shared_ballot.glsl"
   "nbl/builtin/glsl/workgroup/shared_clustered.glsl"
   "nbl/builtin/glsl/workgroup/shared_fft.glsl"
+  "nbl/builtin/glsl/workgroup/shared_blur.glsl"
   "nbl/builtin/glsl/workgroup/shared_shuffle.glsl"
   "nbl/builtin/glsl/workgroup/shared_shuffle_relative.glsl"
   "nbl/builtin/glsl/workgroup/shared_vote.glsl"
@@ -146,6 +147,12 @@ set(nbl_resources_to_embed
   "nbl/builtin/glsl/ext/FFT/parameters_struct.glsl"
   "nbl/builtin/glsl/ext/FFT/parameters.glsl"
   "nbl/builtin/glsl/ext/FFT/types.glsl"
+  # CentralLimitBoxBlur
+  "nbl/builtin/glsl/ext/CentralLimitBoxBlur/default_compute_blur.comp"
+  "nbl/builtin/glsl/ext/CentralLimitBoxBlur/parameters.glsl"
+  "nbl/builtin/glsl/ext/CentralLimitBoxBlur/parameters_struct.glsl"
+  "nbl/builtin/glsl/ext/CentralLimitBoxBlur/blur.glsl"
+
   "nbl/builtin/glsl/ext/LumaMeter/common.glsl"
   "nbl/builtin/glsl/ext/LumaMeter/impl.glsl"
   "nbl/builtin/glsl/ext/ToneMapper/operators.glsl"
