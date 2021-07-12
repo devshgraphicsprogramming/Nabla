@@ -33,17 +33,8 @@ public:
         ECF_NONE = 0
     };
 
-    struct SCreationParams
-    {
-        //IWindow(core::smart_refctd_ptr<IEventCallback>&& _cb, core::smart_refctd_ptr<system::ISystem>&& _sys, uint32_t _w = 0u, uint32_t _h = 0u, E_CREATE_FLAGS _flags = static_cast<E_CREATE_FLAGS>(0)) :
-        core::smart_refctd_ptr<IEventCallback> callback;
-        core::smart_refctd_ptr<system::ISystem> system;
-        uint32_t width = 0u, height = 0u;
-        E_CREATE_FLAGS flags = static_cast<E_CREATE_FLAGS>(0);
-        uint32_t eventChannelCapacityLog2[IInputEventChannel::ET_COUNT];
-    };
 
-    friend class IEventCallback;
+   
     class IEventCallback : public core::IReferenceCounted
     {
     public:
@@ -57,8 +48,10 @@ public:
             w->m_flags |= ECF_HIDDEN;
             onWindowHidden_impl();
         }
-        void onWindowMoved(IWindow* w, uint32_t x, uint32_t y)
+        void onWindowMoved(IWindow* w, int32_t x, int32_t y)
         {
+            w->m_x = x;
+            w->m_y = y;
             onWindowMoved_impl(x, y);
         }
         void onWindowResized(IWindow* w, uint32_t width, uint32_t height)
@@ -120,7 +113,7 @@ public:
     protected:
         virtual void onWindowShown_impl() {}
         virtual void onWindowHidden_impl() {}
-        virtual void onWindowMoved_impl(uint32_t x, uint32_t y) {}
+        virtual void onWindowMoved_impl(int32_t x, int32_t y) {}
         virtual void onWindowResized_impl(uint32_t w, uint32_t h) {}
         virtual void onWindowRotated_impl() {}
         virtual void onWindowMinimized_impl() {}
@@ -135,6 +128,18 @@ public:
         virtual void onKeyboardConnected_impl(core::smart_refctd_ptr<IKeyboardEventChannel>&& kbch) {}
         virtual void onKeyboardDisconnected_impl(IKeyboardEventChannel* mch) {}
     };
+    struct SCreationParams
+    {
+        //IWindow(core::smart_refctd_ptr<IEventCallback>&& _cb, core::smart_refctd_ptr<system::ISystem>&& _sys, uint32_t _w = 0u, uint32_t _h = 0u, E_CREATE_FLAGS _flags = static_cast<E_CREATE_FLAGS>(0)) :
+        core::smart_refctd_ptr<IEventCallback> callback;
+        core::smart_refctd_ptr<system::ISystem> system;
+        int32_t x, y;
+        uint32_t width = 0u, height = 0u;
+        E_CREATE_FLAGS flags = static_cast<E_CREATE_FLAGS>(0);
+        uint32_t eventChannelCapacityLog2[IInputEventChannel::ET_COUNT];
+        std::string windowCaption;
+    };
+    friend struct IEventCallback;
 
     inline bool isFullscreen()      { return (m_flags & ECF_FULLSCREEN); }
     inline bool isHidden()          { return (m_flags & ECF_HIDDEN); }
@@ -166,7 +171,7 @@ protected:
     core::smart_refctd_ptr<IEventCallback> m_cb;
     core::smart_refctd_ptr<system::ISystem> m_sys;
     uint32_t m_width = 0u, m_height = 0u;
-    // TODO add x,y window position to state?
+    int32_t m_x, m_y; // gonna add it here until further instructions XD
     std::underlying_type_t<E_CREATE_FLAGS> m_flags = 0u;
 };
 

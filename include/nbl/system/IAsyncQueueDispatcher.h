@@ -15,8 +15,11 @@ namespace impl
     class IAsyncQueueDispatcherBase
     {
     public:
+        IAsyncQueueDispatcherBase() = default;
+        ~IAsyncQueueDispatcherBase() = default;
         struct request_base_t
         {
+            ~request_base_t() = default;
             // TODO since c++20 we can get rid of both mutex and cvar
             // and do wait/notify on atomic itself
             std::mutex mtx;
@@ -55,9 +58,10 @@ class IAsyncQueueDispatcher : public IThreadHandler<CRTP, InternalStateType>, pu
     static_assert(BufferSize>0u, "BufferSize must not be 0!");
     static_assert(core::isPoT(BufferSize), "BufferSize must be power of two!");
 
+protected:
     using base_t = IThreadHandler<CRTP, InternalStateType>;
     friend base_t;
-
+private:
     constexpr static inline uint32_t MaxRequestCount = BufferSize;
 
     using atomic_counter_t = std::atomic_uint64_t;
@@ -73,7 +77,12 @@ class IAsyncQueueDispatcher : public IThreadHandler<CRTP, InternalStateType>, pu
         return x & Mask;
     }
 
+
 public:
+
+    IAsyncQueueDispatcher() = default;
+    ~IAsyncQueueDispatcher() = default;
+
     using mutex_t = typename base_t::mutex_t;
     using lock_t = typename base_t::lock_t;
     using cvar_t = typename base_t::cvar_t;
@@ -91,6 +100,7 @@ public:
     //void request_impl(request_t& req, ...); // `...` are parameteres forwarded from request()
     //bool process_request_predicate(const request_t& req); // optional, always true if not provided
     //void process_request(request_t& req, internal_state_t& state); // no `state` parameter in case of no internal state
+    //void background_work() // optional, does nothing if not provided
     ///////
 
     using base_t::base_t;
@@ -143,37 +153,44 @@ protected:
         return true;
     }
 
+    void background_work() {}
 private:
     template <typename... Args>
     void work(lock_t& lock, Args&&... optional_internal_state)
     {
         static_assert(sizeof...(optional_internal_state) <= 1u, "How did this happen");
 
-        auto r_id = cb_begin++;
+        static_cast<CRTP*>(this)->background_work();
+        uint64_t r_id = cb_begin;
 #if __cplusplus >= 202002L
         cb_begin.notify_one();
 #endif
         r_id = wrapAround(r_id);
 
-        request_t& req = request_pool[r_id];
-#if __cplusplus >= 202002L
-        req.ready_for_work.wait(false);
-#else
-        while (!req.ready_for_work.load())
-            std::this_thread::yield();
-#endif
-        // do NOT allow canceling of request while they are processed
-        auto lk = req.lock();
-
-        if (static_cast<CRTP*>(this)->process_request_predicate(req))
+        if (cb_begin != cb_end)
         {
-            static_cast<CRTP*>(this)->process_request(req, optional_internal_state...);
-        }
+            request_t& req = request_pool[r_id];
+#if __cplusplus >= 202002L
+            req.ready_for_work.wait(false);
+#else
+            while (!req.ready_for_work.load())
+                std::this_thread::yield();
+#endif
+            // do NOT allow canceling of request while they are processed
+            auto lk = req.lock();
 
-        req.ready_for_work = false;
-        req.ready = true;
-        req.cvar.notify_all();
+            if (static_cast<CRTP*>(this)->process_request_predicate(req))
+            {
+                static_cast<CRTP*>(this)->process_request(req, optional_internal_state...);
+            }
+
+            req.ready_for_work = false;
+            req.ready = true;
+            req.cvar.notify_all();
+        }
+        cb_begin++;
     }
+
 
     bool wakeupPredicate() const { return (cb_begin != cb_end); }
     bool continuePredicate() const { return (cb_begin != cb_end); }

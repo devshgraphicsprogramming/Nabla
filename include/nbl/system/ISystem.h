@@ -6,6 +6,7 @@
 #include "nbl/system/ICancellableAsyncQueueDispatcher.h"
 #include "nbl/system/IFileArchive.h"
 #include "nbl/system/IFile.h"
+#include "nbl/system/CMemoryFile.h"
 #include "CObjectCache.h"
 
 namespace nbl {
@@ -15,12 +16,13 @@ namespace system
 class ISystem final : public core::IReferenceCounted
 {
 public:
+    static core::smart_refctd_ptr<ISystem> create();
     class ISystemCaller : public core::IReferenceCounted
     {
     protected:
         virtual ~ISystemCaller() = default;
 
-    public:
+    public:  
         virtual core::smart_refctd_ptr<IFile> createFile(ISystem* sys, const std::filesystem::path& filename, IFile::E_CREATE_FLAGS flags) = 0;
         virtual size_t read(IFile* file, void* buffer, size_t offset, size_t size) = 0;
         virtual size_t write(IFile* file, const void* buffer, size_t offset, size_t size) = 0;
@@ -80,7 +82,9 @@ private:
         friend base_t;
 
     public:
-        CAsyncQueue(ISystem* owner, core::smart_refctd_ptr<ISystemCaller>&& caller) : base_t(base_t::start_on_construction), m_owner(owner), m_caller(std::move(caller)) {}
+        CAsyncQueue(ISystem* owner, core::smart_refctd_ptr<ISystemCaller>&& caller) : base_t(base_t::start_on_construction), m_owner(owner), m_caller(std::move(caller)) {
+            this->start();
+        }
 
         template <typename FutureType, typename RequestParams>
         void request_impl(SRequestType& req, FutureType& future, RequestParams&& params)
@@ -114,7 +118,8 @@ private:
                 break;
             }
         }
-
+    public:
+        void init() {}
     private:
         ISystem* m_owner;
         core::smart_refctd_ptr<ISystemCaller> m_caller;
@@ -172,21 +177,90 @@ public:
         return true;
     }
 
-    // @sadiuk Implement the rest of functions in manner analogous to createReadFile
-
     bool readFile(future_t<uint32_t>& future, IFile* file, void* buffer, size_t offset, size_t size)
     {
-
+        SRequestParams_READ params;
+        params.buffer = buffer;
+        params.file = file;
+        params.offset = offset;
+        params.size = size;
+        m_dispatcher.request(future, params);
+        return true;
     }
 
     bool writeFile(future_t<uint32_t>& future, IFile* file, const void* buffer, size_t offset, size_t size)
     {
-
+        SRequestParams_WRITE params;
+        params.buffer = buffer;
+        params.file = file;
+        params.offset = offset;
+        params.size = size;
+        m_dispatcher.request(future, params);
+        return true;
     }
 
     // @sadiuk add more methods taken from IFileSystem and IOSOperator
     // and implement via m_dispatcher and ISystemCaller if needed
     // (any system calls should take place in ISystemCaller which is called by CAsyncQueue and nothing else)
+
+    core::smart_refctd_ptr<IFile> createFileView(const void* data, size_t size, std::underlying_type_t<IFile::E_CREATE_FLAGS> flags, const std::filesystem::path &filename)
+    {
+        auto fileView = core::make_smart_refctd_ptr<CFileView>(filename, flags);
+        if (size > 0ull)
+        {
+            fileView->write(data, 0, size);
+        }
+        return fileView;
+    }
+
+    inline core::smart_refctd_ptr<asset::ICPUBuffer> loadBuiltinData(const std::string& builtinPath)
+    {
+#ifdef _NBL_EMBED_BUILTIN_RESOURCES_
+        std::pair<const uint8_t*, size_t> found = nbl::builtin::get_resource_runtime(builtinPath);
+        if (found.first && found.second)
+        {
+            auto returnValue = core::make_smart_refctd_ptr<asset::ICPUBuffer>(found.second);
+            memcpy(returnValue->getPointer(), found.first, returnValue->getSize());
+            return returnValue;
+        }
+        return nullptr;
+#else
+        constexpr auto pathPrefix = "nbl/builtin/";
+        auto pos = builtinPath.find(pathPrefix);
+        std::string path;
+        if (pos != std::string::npos)
+            path = builtinResourceDirectory + builtinPath.substr(pos + strlen(pathPrefix));
+        else
+            path = builtinResourceDirectory + builtinPath;
+
+        auto file = this->createAndOpenFile(path.c_str());
+        if (file)
+        {
+            auto retval = core::make_smart_refctd_ptr<asset::ICPUBuffer>(file->getSize());
+            file->read(retval->getPointer(), file->getSize());
+            file->drop();
+            return retval;
+        }
+        return nullptr;
+#endif
+    }
+    //! Compile time resource ID
+    template<typename StringUniqueType>
+    inline core::smart_refctd_ptr<asset::ICPUBuffer> loadBuiltinData()
+    {
+#ifdef _NBL_EMBED_BUILTIN_RESOURCES_
+        std::pair<const uint8_t*, size_t> found = nbl::builtin::get_resource<StringUniqueType>();
+        if (found.first && found.second)
+        {
+            auto returnValue = core::make_smart_refctd_ptr<asset::ICPUBuffer>(found.second);
+            memcpy(returnValue->getPointer(), found.first, returnValue->getSize());
+            return returnValue;
+        }
+        return nullptr;
+#else
+        return loadBuiltinData(StringUniqueType::value);
+#endif
+    }
 
     //! Warning: blocking call
     core::smart_refctd_ptr<IFileArchive> createFileArchive(const std::filesystem::path& filename)

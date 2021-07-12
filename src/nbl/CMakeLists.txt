@@ -181,12 +181,11 @@ set(NBL_CORE_SOURCES
 )
 set(NBL_SYSTEM_SOURCES
 # Junk to refactor
-	${NBL_ROOT_PATH}/source/Nabla/CFileList.cpp
+	${NBL_ROOT_PATH}/src/nbl/system/ISystem.cpp
+	${NBL_ROOT_PATH}/src/nbl/system/CFileWin32.cpp
 	${NBL_ROOT_PATH}/source/Nabla/CFileSystem.cpp
 	${NBL_ROOT_PATH}/source/Nabla/CLimitReadFile.cpp
 	${NBL_ROOT_PATH}/source/Nabla/CMemoryFile.cpp
-	${NBL_ROOT_PATH}/source/Nabla/CReadFile.cpp
-	${NBL_ROOT_PATH}/source/Nabla/CWriteFile.cpp
 	${NBL_ROOT_PATH}/source/Nabla/CMountPointReader.cpp
 	${NBL_ROOT_PATH}/source/Nabla/CPakReader.cpp
 	${NBL_ROOT_PATH}/source/Nabla/CTarReader.cpp

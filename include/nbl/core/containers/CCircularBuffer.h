@@ -45,7 +45,7 @@ protected:
         memset(m_mem, 0, s);
 
         auto n_blocks = numberOfFlagBlocksNeeded(cap);
-        m_flags = std::make_unique<atomic_alive_flags_block_t>(n_blocks);
+        m_flags = std::make_unique<atomic_alive_flags_block_t[]>(n_blocks);
         for (size_t i = 0u; i < n_blocks; ++i)
             std::atomic_init(m_flags.get() + i, 0);
     }
@@ -58,6 +58,11 @@ protected:
     const T* getStorage() const
     {
         return reinterpret_cast<const T*>(m_mem);
+    }
+
+    atomic_alive_flags_block_t* getAliveFlagsStorage()
+    {
+        return m_flags.get();
     }
 
     const atomic_alive_flags_block_t* getAliveFlagsStorage() const
@@ -108,6 +113,11 @@ protected:
         return reinterpret_cast<const T*>(m_mem);
     }
 
+    atomic_alive_flags_block_t* getAliveFlagsStorage()
+    {
+        return m_flags;
+    }
+
     const atomic_alive_flags_block_t* getAliveFlagsStorage() const
     {
         return m_flags;
@@ -149,7 +159,7 @@ class CCircularBufferBase : public Base
 protected:
     bool isAlive(uint32_t ix) const
     {
-        typename base_t::atomic_alive_flags_block_t* flags = base_t::getAliveFlagsStorage();
+        typename const base_t::atomic_alive_flags_block_t* flags = base_t::getAliveFlagsStorage();
         const auto block_n = ix / base_t::bits_per_flags_block;
         const auto block = flags[block_n].load();
         const auto local_ix = ix & (base_t::bits_per_flags_block - 1u);
@@ -163,12 +173,12 @@ protected:
 
         auto xormask = static_cast<typename base_t::atomic_alive_flags_block_t::value_type>(1) << local_ix;
 
-        typename base_t::atomic_alive_flags_block_t* flags = base_t::getAliveFlagsStorage();
+        auto* flags = base_t::getAliveFlagsStorage();
         flags[block_n].fetch_xor(xormask);
     }
 
 private:
-    static inline counter_t wrapAround(counter_t x)
+    counter_t wrapAround(counter_t x)
     {
         const counter_t mask = static_cast<counter_t>(base_t::capacity()) - static_cast<counter_t>(1);
         return x & mask;

@@ -24,6 +24,7 @@ namespace impl
                 return future == nullptr;
             }
 
+            future_base_t* future = nullptr;
         private:
             friend future_base_t;
             friend ICancellableAsyncQueueDispatcherBase;
@@ -34,7 +35,6 @@ namespace impl
                 future = _future;
             }
 
-            future_base_t* future = nullptr;
         };
 
         class future_base_t
@@ -164,8 +164,8 @@ protected:
     void notify_future(RequestType& req, Args&&... args)
     {
         auto& req_base = static_cast<request_base_t&>(req);
-        auto* future = static_cast<future_t<T>*>(req.future);
-        future->notify(std::forward(args)...);
+        auto* future = static_cast<future_t<T>*>(req_base.future);
+        future->notify(std::forward<Args...>(args)...);
     }
 
     //! Must be called from within request_impl()

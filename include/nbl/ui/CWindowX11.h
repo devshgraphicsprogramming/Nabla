@@ -1,9 +1,9 @@
 #ifndef __C_WINDOW_X11_H_INCLUDED__
 #define __C_WINDOW_X11_H_INCLUDED__
 
+#ifdef _NBL_PLATFORM_LINUX_x1
 #include "nbl/ui/IWindowX11.h"
 
-#ifdef _NBL_PLATFORM_LINUX_
 
 #include <X11/Xutil.h>
 #ifdef _NBL_LINUX_X11_VIDMODE_
@@ -17,15 +17,16 @@
 namespace nbl {
 namespace ui
 {
-
+class CWindowManagerX11;
 class CWindowX11 final : public IWindowX11
 {
 	static int printXErrorCallback(Display *Display, XErrorEvent *event);
 
 public:
 	explicit CWindowX11(core::smart_refctd_ptr<system::ISystem>&& sys, Display* dpy, native_handle_t win);
-
-    Display* getDisplay() const override { return m_dpy; }
+	explicit CWindowX11(CWindowManagerX11* manager, Display* dpy, native_handle_t win);
+    ~CWindowX11();
+	Display* getDisplay() const override { return m_dpy; }
 	native_handle_t getNativeHandle() const override { return m_native; }
 
 	static core::smart_refctd_ptr<CWindowX11> create(core::smart_refctd_ptr<system::ISystem>&& sys, uint32_t _w, uint32_t _h, E_CREATE_FLAGS _flags)
@@ -37,11 +38,18 @@ public:
 		return core::smart_refctd_ptr<CWindowX11>(win, core::dont_grab);
 	}
 
+	void processEvent(XEvent event);
 private:
     CWindowX11(core::smart_refctd_ptr<system::ISystem>&& sys, uint32_t _w, uint32_t _h, E_CREATE_FLAGS _flags);
 
     Display* m_dpy;
     native_handle_t m_native;
+	CWindowManagerX11* m_manager;
+	// Not sure yet if i need these or i can do without them 
+	bool isMaximized = false, isMinimized = false; 
+private:
+	std::map<XID, core::smart_refctd_ptr<IMouseEventChannel>> m_mouseEventChannel;
+	std::map<XID, core::smart_refctd_ptr<IKeyboardEventChannel>> m_keyboardEventChannel;
 };
 
 }
